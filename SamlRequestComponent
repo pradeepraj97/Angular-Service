@@ -1,0 +1,39 @@
+import { Component, OnInit } from "@angular/core";
+import { NgxSpinnerService } from "ngx-spinner";
+import { SamlService } from "../../service/saml.service";
+import { Router } from "@angular/router";
+import { environment } from "../../../environments/environment.prod"; 
+@Component({
+  selector: "app-saml-request",
+  templateUrl: "./saml-request.component.html",
+  styleUrls: ["./saml-request.component.css"],
+})
+export class SamlRequestComponent implements OnInit {
+  constructor(
+    private spinner: NgxSpinnerService,
+    private samlService: SamlService,
+    private router: Router
+  ) {
+    this.spinner.show();
+  }
+
+  ngOnInit(): void {
+    if (window !== window.top) {
+      this.router.navigateByUrl("/403-page");
+    } else {
+      this.createAndSendSAMLRequest();
+    }
+  }
+
+  createAndSendSAMLRequest() {
+    const samlRequest = this.samlService.createSAMLRequest();
+  
+    const loginUrl = `${this.samlService.getIdpSSOUrl()}?SAMLRequest=${samlRequest}`;
+    console.log("Final Request URL", loginUrl);
+    this.redirectToLoginUrl(loginUrl);
+  }
+  private redirectToLoginUrl(url: string): void { 
+    // window.location.href = environment.loginPageUrl;
+    window.location.href = url;
+  }
+}
