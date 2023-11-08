@@ -1,0 +1,71 @@
+import { Injectable } from "@angular/core";
+import pako from "pako";
+@Injectable({
+  providedIn: "root",
+})
+export class SamlService {
+  private idpSSOUrl: string = "https://test.com/adfs/ls"; // IdP's SSO Login URL
+  private issuer: string = "https://test.axisb.com:8443/axis/#/login"; // Entity Id
+  private redirectUrl: string =
+    "https://test.com:8080/test-backend-0.0.1-SNAPSHOT/saml/response"; //Redirect Url
+
+  constructor() {}
+
+  getIdpSSOUrl(): string {
+    return this.idpSSOUrl;
+  }
+
+  createSAMLRequest(): string {
+    const samlRequest = this.generateSAMLRequest();
+    console.log("SAML Request", samlRequest);
+
+    // Step 1: Encode UTF-16 to UTF-8
+    const utf8Encoder = new TextEncoder();
+    const samlRequestUTF8Bytes = utf8Encoder.encode(samlRequest);
+
+    // Step 2: Deflate
+    const deflateEncodedSamlRequest = pako.deflateRaw(samlRequestUTF8Bytes);
+
+    // Step 3: Base64 encode the Deflate encoded SAML request
+    const base64EncodedSamlRequest = btoa(
+      String.fromCharCode.apply(null, deflateEncodedSamlRequest)
+    );
+
+    // You should now have the base64EncodedSamlRequest as the result you want
+    console.log("Base64 Encoded Value:", base64EncodedSamlRequest);
+
+    // Step 4: URI encode the Base64 encoded SAML request
+    const urlEncodedSamlRequest = encodeURIComponent(base64EncodedSamlRequest);
+    console.log("URLEncoded Value:", urlEncodedSamlRequest);
+    return urlEncodedSamlRequest;
+  }
+  private generateSAMLRequest(): string {
+    try {
+      const issueInstant = new Date().toISOString();
+      const uniqueId = this.generateUniqueId(40);
+      const samlRequest = `<?xml version="1.0" encoding="UTF-8"?><saml2p:AuthnRequest
+xmlns:saml2p="urn:oasis:names:tc:SAML:2.0:protocol" 
+AssertionConsumerServiceURL="${this.redirectUrl}"
+Destination="${this.idpSSOUrl}"
+ID="${uniqueId}" IssueInstant="${issueInstant}"
+ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Version="2.0">
+<saml2:Issuer xmlns:saml2="urn:oasis:names:tc:SAML:2.0:assertion">${this.issuer}</saml2:Issuer><saml2p:NameIDPolicy AllowCreate="true" Format="urn:oasis:names:tc:SAML:2.0:nameid-format:persistent"/></saml2p:AuthnRequest>`;
+      return samlRequest;
+    } catch (error) {
+      console.error("Error generating SAML AuthnRequest:", error);
+      throw new Error("SAML AuthnRequest Generation Failed.");
+    }
+  }
+
+  private generateUniqueId(length: number): string {
+    const characters = "0123456789abcdef";
+    let id = "_";
+
+    for (let i = 0; i < length; i++) {
+      const randomIndex = Math.floor(Math.random() * characters.length);
+      id += characters[randomIndex];
+    }
+
+    return id;
+  }
+}
